@@ -10,28 +10,39 @@ import { VideoReels } from "../components/VideoReels";
 type Tab = "photos" | "videos";
 
 function ActivityBadge() {
-  const [lastSeen, setLastSeen] = useState<string | null>(null);
+  const [events, setEvents] = useState<{ msg: string; key: number }[]>([]);
 
   useMediaEvents("view", (e) => {
-    setLastSeen(`Viewed ${e.type} #${e.id}`);
+    setEvents((prev) => [...prev.slice(-2), { msg: `👁 Viewed ${e.type} #${e.id}`, key: Date.now() }]);
+  });
+
+  useMediaEvents("download", (e) => {
+    setEvents((prev) => [...prev.slice(-2), { msg: `⬇ Downloaded ${e.type} #${e.id}`, key: Date.now() + 1 }]);
   });
 
   return (
-    <AnimatePresence>
-      {lastSeen && (
-        <motion.div
-          key={lastSeen}
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 10, scale: 0.95 }}
-          transition={{ type: "spring", stiffness: 400, damping: 30 }}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full backdrop-blur-md px-14 py-3 text-white shadow-xl"
-          style={{ fontSize: 14 }}
-        >
-          {lastSeen}
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 items-end">
+      <AnimatePresence>
+        {events.map((ev) => (
+          <motion.div
+            key={ev.key}
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            onAnimationComplete={() => {
+              setTimeout(() => {
+                setEvents((prev) => prev.filter((e) => e.key !== ev.key));
+              }, 3000);
+            }}
+            className="flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-md border border-white/15 px-5 py-2.5 text-white shadow-xl"
+            style={{ fontSize: 13 }}
+          >
+            {ev.msg}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
   );
 }
 
