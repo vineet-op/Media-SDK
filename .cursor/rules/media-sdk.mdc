@@ -1,0 +1,8 @@
+---
+description: Rules for building UI with media-react and media-ui-react
+globs: apps/**/*.tsx, apps/**/*.ts
+alwaysApply: true
+---
+
+@skills/SKILL-data-wiring.md
+@skills/SKILL-ui-components.md

@@ -88,6 +88,10 @@ export class PexelsClient {
     return video;
   }
 
+  trackDownload(id: number, type: 'photo' | 'video', url: string): void {
+    this.events.emit('download', { id, type, url });
+  }
+
   clearCache(): void {
     this.photoCache.clear();
     this.videoCache.clear();

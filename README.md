@@ -1,159 +1,99 @@
-# Turborepo starter
+# Media SDK
 
-This Turborepo starter is maintained by the Turborepo core team.
+A headless media SDK ecosystem powered by the Pexels API.
 
-## Using this example
+## Architecture
 
-Run the following command:
+```
+app (apps/web)
+  ├── imports media-react      → data, auth, events
+  └── imports media-ui-react   → display hooks (headless)
 
-```sh
-npx create-turbo@latest
+media-react
+  └── imports media-core       → PexelsClient, types
+
+media-ui-react
+  └── imports nothing from SDK → pure UI behavior only
+
+media-core
+  └── imports nothing          → zero React, zero DOM
 ```
 
-## What's inside?
+Dependency direction is strictly enforced:
+- `app → wrappers → core`
+- `app → components`
+- Components never import core or wrappers
+- Core never imports React or DOM
 
-This Turborepo includes the following packages/apps:
+## Packages
 
-### Apps and Packages
+| Package | Role |
+|---|---|
+| `media-core` | Framework-agnostic Pexels client, event emitter, cache |
+| `media-react` | React provider + hooks wrapping media-core |
+| `media-ui-react` | Headless UI hooks (Grid, Lightbox, ReelSwiper) |
+| `media-native` | React Native wrapper — stubbed, see package README |
+| `media-ui-native` | Headless RN UI hooks — stubbed, see package README |
+| `apps/web` | Next.js app wiring data + UI together |
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+## Setup
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+```bash
+# Install dependencies
+npm install
 
-### Utilities
+# Add your Pexels API key
+echo "NEXT_PUBLIC_PEXELS_API_KEY=your_key_here" > apps/web/.env.local
 
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+# Run the app
+npm run dev
 ```
 
-Without global `turbo`, use your package manager:
+Get a free Pexels API key at https://www.pexels.com/api/
 
-```sh
-cd my-turborepo
-npx turbo build
-npm dlx turbo build
-npm exec turbo build
-```
+## Skills (AI coding tool instructions)
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Two skill documents live in `/skills/`:
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+- `SKILL-data-wiring.md` — how to set up the Provider, use hooks, handle pagination, subscribe to events
+- `SKILL-ui-components.md` — how to use headless hooks, spread prop-getters, handle a11y, style components
 
-```sh
-turbo build --filter=docs
-```
+These were written to steer AI tools (Cursor / Claude) when building UI features against this SDK.
 
-Without global `turbo`:
+### How the skills were tested
 
-```sh
-npx turbo build --filter=docs
-npm exec turbo build --filter=docs
-npm exec turbo build --filter=docs
-```
+Both skill docs were added as Cursor rules (`.cursor/rules/`) during the build of `apps/web`.
+Specifically:
+- The data skill was active when writing `PhotoGrid.tsx` and `VideoReels.tsx`
+- The UI skill was active when wiring `useGrid`, `useLightbox`, and `useReelSwiper` into the app
+- The AI correctly avoided calling hooks conditionally, correctly spread all prop-getters,
+  and correctly added `e.stopPropagation()` on nav buttons — behaviours it would otherwise miss.
 
-### Develop
+## What was AI-assisted vs hand-written
 
-To develop all apps and packages, run the following command:
+| Part | How it was built |
+|---|---|
+| `media-core/types.ts` | Hand-written from Pexels API response inspection |
+| `media-core/emitter.ts` | AI-guided, hand-written and reviewed |
+| `media-core/cache.ts` | Candidate supplied the de-dupe pattern; AI formatted it |
+| `media-core/client.ts` | AI-guided structure, hand-written methods |
+| `media-react/context.tsx` | Hand-written; AI caught `import type` bug |
+| `media-react/hooks/*.ts` | AI-guided pattern, hand-written; AI caught object-in-deps infinite loop bug |
+| `media-ui-react/useGrid.ts` | AI-guided + hand-written |
+| `media-ui-react/useLightbox.ts` | AI-written skeleton, candidate fixed input design bug |
+| `media-ui-react/useReelSwiper.ts` | Hand-written by candidate using AI explanation |
+| `apps/web` components | AI-generated, candidate reviewed and debugged |
+| `skills/*.md` | Hand-written by candidate based on bugs found during build |
+| This README | Hand-written |
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+## Scoped cuts (with rationale)
 
-```sh
-cd my-turborepo
-turbo dev
-```
+**`media-native` and `media-ui-native`** — stubbed with documented API contracts.
+Reason: the web platform was the primary deliverable. The architecture is identical;
+a full port would replace DOM APIs with RN equivalents (`FlatList`, `Modal`, `BackHandler`).
 
-Without global `turbo`, use your package manager:
+**Tests** — not included under time constraints. The cache de-dupe logic and event emitter
+are the highest-value units to test first.
 
-```sh
-cd my-turborepo
-npx turbo dev
-npm exec turbo dev
-npm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-npm exec turbo dev --filter=web
-npm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-npm exec turbo login
-npm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-npm exec turbo link
-npm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+**Docs site** — the `apps/docs` Next.js app is scaffolded but not populated.
+SDK reference lives in the source TypeScript types + JSDoc.
